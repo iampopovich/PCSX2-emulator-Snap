@@ -28,7 +28,7 @@ jobs:
           echo "Upstream version (noble): $UPSTREAM_VERSION"
 
           # Latest version already published to the stable channel of our snap
-          PUBLISHED_VERSION=$(curl -s "https://api.snapcraft.io/v2/snaps/info/pcsx2-emulator" \
+          PUBLISHED_VERSION=$(curl -s "https://api.snapcraft.io/v2/snaps/info/pcsx2-fresh" \
             -H "Snap-Device-Series: 16" | \
             python3 -c "import json,sys; d=json.load(sys.stdin); ch=[c for c in d.get('channel-map',[]) if c['channel']['name']=='stable']; print(ch[0]['version'] if ch else '')" || true)
           echo "Published version: $PUBLISHED_VERSION"
@@ -84,4 +84,4 @@ jobs:
         env:
           SNAPCRAFT_STORE_CREDENTIALS: ${{ secrets.SNAPCRAFT_STORE_CREDENTIALS }}
         run: |
-          snapcraft promote pcsx2-emulator --from-channel=edge --to-channel=stable --yes
+          snapcraft promote pcsx2-fresh --from-channel=edge --to-channel=stable --yes

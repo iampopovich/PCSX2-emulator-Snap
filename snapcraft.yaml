@@ -1,4 +1,4 @@
-name: pcsx2-emulator
+name: pcsx2-fresh
 base: core24
 adopt-info: pcsx2-app
 platforms:
@@ -16,7 +16,7 @@ confinement: strict
 icon: AppIconLarge.png
 
 apps:
-  pcsx2-emulator:
+  pcsx2-fresh:
     command-chain: [snap/command-chain/desktop-launch-pcsx2]
     command: usr/bin/pcsx2-qt
     desktop: usr/share/applications/PCSX2.desktop
