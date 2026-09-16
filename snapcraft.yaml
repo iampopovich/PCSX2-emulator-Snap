@@ -73,9 +73,11 @@ parts:
     stage-packages:
       - libpcap0.8t64
       - libshaderc1
+      - libcurl4t64
     prime:
       - usr/lib/$CRAFT_ARCH_TRIPLET_BUILD_FOR/libpcap.so*
       - usr/lib/$CRAFT_ARCH_TRIPLET_BUILD_FOR/libshaderc.so*
+      - usr/lib/$CRAFT_ARCH_TRIPLET_BUILD_FOR/libcurl.so*
 
   command-chain:
     after: [dependencies]
