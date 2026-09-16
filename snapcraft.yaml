@@ -57,7 +57,7 @@ parts:
       craftctl default
       VERSION=$(dpkg-parsechangelog -l $CRAFT_PART_INSTALL/usr/share/doc/pcsx2-stable/changelog.gz -S Version | cut -d'~' -f1)
       craftctl set version="$VERSION"
-      sed -i 's|Name=PCSX2|Name=PCSX2 [Kyu]|' $CRAFT_STAGE/usr/share/applications/PCSX2.desktop
+      sed -i 's|Name=PCSX2|Name=PCSX2 Fresh|' $CRAFT_STAGE/usr/share/applications/PCSX2.desktop
     prime:
       - usr/bin/pcsx2-qt
       - usr/share/applications/PCSX2.desktop
