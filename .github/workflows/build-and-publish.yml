@@ -1,0 +1,87 @@
+name: Build and publish snap
+
+on:
+  schedule:
+    # Every 12 hours - PCSX2 upstream (pcsx2-team PPA, noble/24.04) ships builds frequently
+    - cron: '0 */12 * * *'
+  workflow_dispatch: {}
+  push:
+    branches: [main]
+    paths:
+      - snapcraft.yaml
+      - command-chain/**
+      - .github/workflows/build-and-publish.yml
+
+jobs:
+  check-upstream:
+    runs-on: ubuntu-latest
+    outputs:
+      new_version: ${{ steps.check.outputs.new_version }}
+      upstream_version: ${{ steps.check.outputs.upstream_version }}
+    steps:
+      - name: Compare upstream PPA package with published snap
+        id: check
+        run: |
+          set -euo pipefail
+          UPSTREAM_VERSION=$(curl -s "https://api.launchpad.net/1.0/~pcsx2-team/+archive/ubuntu/pcsx2-daily?ws.op=getPublishedSources&source_name=pcsx2-stable&status=Published&exact_match=true&distro_series=https://api.launchpad.net/1.0/ubuntu/noble&order_by_date=true" | \
+            python3 -c "import json,sys; d=json.load(sys.stdin); e=d.get('entries',[]); print(e[0]['source_package_version'].split('~')[0] if e else '')")
+          echo "Upstream version (noble): $UPSTREAM_VERSION"
+
+          # Latest version already published to the stable channel of our snap
+          PUBLISHED_VERSION=$(curl -s "https://api.snapcraft.io/v2/snaps/info/pcsx2-emulator" \
+            -H "Snap-Device-Series: 16" | \
+            python3 -c "import json,sys; d=json.load(sys.stdin); ch=[c for c in d.get('channel-map',[]) if c['channel']['name']=='stable']; print(ch[0]['version'] if ch else '')" || true)
+          echo "Published version: $PUBLISHED_VERSION"
+
+          if [ "$UPSTREAM_VERSION" != "$PUBLISHED_VERSION" ] || [ "${{ github.event_name }}" = "workflow_dispatch" ] || [ "${{ github.event_name }}" = "push" ]; then
+            echo "new_version=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "new_version=false" >> "$GITHUB_OUTPUT"
+          fi
+          echo "upstream_version=$UPSTREAM_VERSION" >> "$GITHUB_OUTPUT"
+
+  build-and-publish:
+    needs: check-upstream
+    if: needs.check-upstream.outputs.new_version == 'true'
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        arch: [amd64]
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install snapcraft
+        run: sudo snap install snapcraft --classic
+
+      - name: Build snap (${{ matrix.arch }})
+        uses: snapcore/action-build@v1
+        id: build
+        with:
+          path: .
+        env:
+          SNAPCRAFT_BUILD_ENVIRONMENT: lxd
+          SNAPCRAFT_BUILD_ENVIRONMENT_MEMORY: 4G
+
+      - name: Publish to edge first
+        uses: snapcore/action-publish@v1
+        env:
+          SNAPCRAFT_STORE_CREDENTIALS: ${{ secrets.SNAPCRAFT_STORE_CREDENTIALS }}
+        with:
+          snap: ${{ steps.build.outputs.snap }}
+          release: edge
+
+  promote-to-stable:
+    needs: [check-upstream, build-and-publish]
+    if: needs.check-upstream.outputs.new_version == 'true'
+    runs-on: ubuntu-latest
+    # Give edge a little soak time before promoting; adjust/remove if you want
+    # instant stable releases instead of an edge -> stable gate.
+    steps:
+      - name: Install snapcraft
+        run: sudo snap install snapcraft --classic
+
+      - name: Promote edge to stable
+        env:
+          SNAPCRAFT_STORE_CREDENTIALS: ${{ secrets.SNAPCRAFT_STORE_CREDENTIALS }}
+        run: |
+          snapcraft promote pcsx2-emulator --from-channel=edge --to-channel=stable --yes
