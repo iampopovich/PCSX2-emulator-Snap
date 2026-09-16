@@ -3,7 +3,7 @@ name: Build and publish snap
 on:
   schedule:
     # Every 12 hours - PCSX2 upstream (pcsx2-team PPA, noble/24.04) ships builds frequently
-    - cron: '0 */12 * * *'
+    - cron: '0 */23 * * *'
   workflow_dispatch: {}
   push:
     branches: [main]
